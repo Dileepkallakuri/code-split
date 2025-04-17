@@ -10,7 +10,8 @@ def apply_styles():
             background: #1e1e1e;
             padding: 30px;
             border-radius: 10px;
-            text-align: center;   
+            text-align: center;
+            box-shadow: 0 0 10px rgba(255,255,255,0.1);
         }
         .login-box h2 {
             color: #21c55d;

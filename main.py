@@ -3,11 +3,11 @@ from utils.auth import check_credentials, login_screen, show_sidebar
 from utils.helpers import load_app_module
 from styles.custom import apply_styles
 
-# Apply custom CSS
-apply_styles()
-
 # Set page config
 st.set_page_config(page_title="Dileep Apps Space", page_icon="🛠️", layout="wide")
+
+# Apply custom CSS
+apply_styles()
 
 # Initialize session state variables
 if "authenticated" not in st.session_state:

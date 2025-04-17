@@ -4,8 +4,14 @@ def apply_styles():
     """Apply custom CSS styles to the app"""
     st.markdown("""
     <style>
+        /* Remove the gray area above the welcome message */
+        .stApp {
+            background-color: #0e1117; /* Match the dark theme background */
+        }
+        
         .login-box {
             margin: 0 auto;
+            margin-top: 50px; /* Adjust this to control space at the top */
             width: 320px;
             background: #1e1e1e;
             padding: 30px;

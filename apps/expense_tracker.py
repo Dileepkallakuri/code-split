@@ -34,7 +34,7 @@ def show_expense_tracker():
     elif selected_nav == "Settings":
         show_settings_page()
 
-        def init_database():
+def init_database():
     """Initialize SQLite database with tables if they don't exist"""
     db_path = "data/expense_tracker.db"
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -105,7 +105,7 @@ def show_expense_tracker():
     conn.commit()
     conn.close()
 
-    def init_session_state():
+def init_session_state():
     """Initialize session state variables"""
     # Transaction form defaults
     if "transaction_date" not in st.session_state:
@@ -121,7 +121,7 @@ def show_expense_tracker():
     if "current_year" not in st.session_state:
         st.session_state.current_year = datetime.date.today().year
 
-        @dataclass
+@dataclass
 class Account:
     id: Optional[int]
     name: str
@@ -377,7 +377,7 @@ def show_transfer_form():
             st.success("Transfer saved successfully!")
             st.session_state.transaction_date = date  # Remember the date for next entry
 
-            def show_calendar_view():
+def show_calendar_view():
     """Show transactions in a calendar view"""
     # Month/Year selector
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -462,7 +462,7 @@ def show_daily_transactions():
     else:
         st.info("No transactions for this date.")
 
-        def show_dashboard():
+def show_dashboard():
     """Show the main dashboard with overview"""
     st.subheader("Summary")
     
@@ -547,7 +547,7 @@ def show_recent_transactions(limit=10):
             
             st.divider()
 
-            def show_statistics_page():
+def show_statistics_page():
     """Show statistics and visual reports"""
     st.subheader("Statistics")
     
@@ -760,7 +760,7 @@ def show_settings_page():
     with tab3:
         show_preferences()
 
-    def show_settings_page():
+def show_settings_page():
     """Settings page"""
     st.subheader("Settings")
     

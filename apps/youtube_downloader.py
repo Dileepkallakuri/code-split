@@ -246,7 +246,25 @@ def show_youtube_downloader():
         
         st.markdown("---")
         
-        # Now try to get the transcript
+        # Always show custom error message and redirect button regardless of what happens
+        st.markdown("""
+        <div class="error-message">
+        Dileep's data center IPs are blocked due to excessive requests. In the event of critical priority, I can attempt connection via his personal private networks or Home VPNs, which requires authorized access. Direct communication with Dileep is needed to grant network traversal permissions.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Add a proceed button with more descriptive text
+        if st.button("Proceed to Alternative Service"):
+            # Use JavaScript to redirect when button is clicked
+            js = f"""
+            <script>
+                window.location.href = "https://093e6c49-4e56-41d3-aeab-98d3379ab34d-00-rykhxqi1xadr.worf.replit.dev/";
+            </script>
+            """
+            st.markdown(js, unsafe_allow_html=True)
+        
+        # Now try to get the transcript - this code will still run but the error message
+        # and redirect button will always appear above
         try:
             # Get transcript with loading indicator
             with st.spinner("Fetching transcript... This may take a moment"):
@@ -303,22 +321,8 @@ def show_youtube_downloader():
                     st.download_button("📥 Download SRT", srt_data, file_name=f"{info['title']}.srt")
                     
         except Exception as e:
-            # Display custom error message
-            st.markdown("""
-            <div class="error-message">
-            Dileep's data center IPs are blocked due to excessive requests. In the event of critical priority, I can attempt connection via his personal private networks or Home VPNs, which requires authorized access. Direct communication with Dileep is needed to grant network traversal permissions.
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Add a proceed button instead of automatic redirection
-            if st.button("Proceed"):
-                # Use JavaScript to redirect when button is clicked
-                js = f"""
-                <script>
-                    window.location.href = "https://093e6c49-4e56-41d3-aeab-98d3379ab34d-00-rykhxqi1xadr.worf.replit.dev/";
-                </script>
-                """
-                st.markdown(js, unsafe_allow_html=True)
+            # Still display the error for debugging, but the custom message will already be shown above
+            st.error(f"Error processing transcript: {str(e)}")
 
 if __name__ == "__main__":
     show_youtube_downloader()

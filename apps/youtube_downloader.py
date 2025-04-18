@@ -19,8 +19,8 @@ if not os.path.exists('cache'):
 # Format: "http://ip:port"
 PROXIES = [
     # Add your proxies here, example:
-     "http://202.131.153.146:1111",
-     "http://27.124.20.41:3128",
+    # "http://202.131.153.146:1111",
+    # "http://27.124.20.41:3128",
 ]
 
 def get_random_proxy():

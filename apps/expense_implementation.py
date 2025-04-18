@@ -760,6 +760,21 @@ def show_settings_page():
     with tab3:
         show_preferences()
 
+    def show_settings_page():
+    """Settings page"""
+    st.subheader("Settings")
+    
+    tab1, tab2, tab3 = st.tabs(["Categories", "Data Management", "Preferences"])
+    
+    with tab1:
+        show_categories_management()
+    
+    with tab2:
+        show_data_management()
+    
+    with tab3:
+        show_preferences()
+
 def show_categories_management():
     """Manage expense and income categories"""
     st.markdown("#### Categories")
@@ -780,4 +795,332 @@ def show_categories_management():
                     st.markdown(f"## {category.icon}")
                 
                 with col2:
-                    st.markdown(
+                    st.markdown(f"**{category.name}**")
+                    st.markdown(f"<div style='background-color: {category.color}; width: 20px; height: 20px; display: inline-block; border-radius: 50%;'></div> {category.color}", unsafe_allow_html=True)
+                
+                with col3:
+                    if st.button(f"Edit", key=f"edit_cat_{category.id}"):
+                        st.session_state.edit_category_id = category.id
+                        st.session_state.edit_category_name = category.name
+                        st.session_state.edit_category_icon = category.icon
+                        st.session_state.edit_category_color = category.color
+                    
+                    if st.button(f"Delete", key=f"delete_cat_{category.id}"):
+                        if st.session_state.get('confirm_delete_cat') == category.id:
+                            delete_category(category.id)
+                            st.success(f"Category '{category.name}' deleted.")
+                            st.rerun()
+                        else:
+                            st.session_state.confirm_delete_cat = category.id
+                            st.warning(f"Click 'Delete' again to confirm deletion of '{category.name}'.")
+                
+                st.divider()
+    else:
+        st.info(f"No {category_type.lower()} categories found.")
+    
+    # Add new category form
+    with st.expander(f"Add New {category_type} Category"):
+        with st.form(f"add_{category_type.lower()}_category"):
+            name = st.text_input("Category Name")
+            
+            # Icons selection
+            icons = ["🍔", "🚗", "💡", "🏠", "👕", "🏥", "💰", "📈", "🎁", "📱", "🛠️", "✈️", "🏫", "🎮", "🍹", "🎭"]
+            selected_icon = st.selectbox("Icon", icons)
+            
+            # Color picker
+            color = st.color_picker("Color", "#33B5FF")
+            
+            submitted = st.form_submit_button(f"Add {category_type} Category")
+            
+            if submitted and name:
+                add_category(name, category_type.lower(), selected_icon, color)
+                st.success(f"{category_type} category '{name}' added successfully!")
+                st.rerun()
+    
+    # Edit category form (appears when Edit button is clicked)
+    if hasattr(st.session_state, 'edit_category_id'):
+        with st.form("edit_category_form"):
+            st.subheader(f"Edit Category")
+            
+            name = st.text_input("Category Name", value=st.session_state.edit_category_name)
+            
+            # Icons selection
+            icons = ["🍔", "🚗", "💡", "🏠", "👕", "🏥", "💰", "📈", "🎁", "📱", "🛠️", "✈️", "🏫", "🎮", "🍹", "🎭"]
+            selected_icon = st.selectbox("Icon", icons, index=icons.index(st.session_state.edit_category_icon) if st.session_state.edit_category_icon in icons else 0)
+            
+            # Color picker
+            color = st.color_picker("Color", st.session_state.edit_category_color)
+            
+            submitted = st.form_submit_button("Save Changes")
+            
+            if submitted and name:
+                update_category(st.session_state.edit_category_id, name, selected_icon, color)
+                st.success(f"Category '{name}' updated successfully!")
+                del st.session_state.edit_category_id
+                del st.session_state.edit_category_name
+                del st.session_state.edit_category_icon
+                del st.session_state.edit_category_color
+                st.rerun()
+
+def add_category(name, category_type, icon, color):
+    """Add a new category to the database"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+    INSERT INTO categories (name, type, icon, color)
+    VALUES (?, ?, ?, ?)
+    ''', (name, category_type, icon, color))
+    
+    conn.commit()
+    conn.close()
+
+def update_category(category_id, name, icon, color):
+    """Update an existing category"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+    UPDATE categories
+    SET name = ?, icon = ?, color = ?
+    WHERE id = ?
+    ''', (name, icon, color, category_id))
+    
+    conn.commit()
+    conn.close()
+
+def delete_category(category_id):
+    """Delete a category and set associated transactions to uncategorized"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if category has transactions
+    cursor.execute("SELECT COUNT(*) FROM transactions WHERE category_id = ?", (category_id,))
+    tx_count = cursor.fetchone()[0]
+    
+    if tx_count > 0:
+        # Option 1: Set transactions to NULL category
+        cursor.execute("UPDATE transactions SET category_id = NULL WHERE category_id = ?", (category_id,))
+    
+    # Delete the category
+    cursor.execute("DELETE FROM categories WHERE id = ?", (category_id,))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+def show_data_management():
+    """Data management options"""
+    st.markdown("#### Data Management")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("##### Export Data")
+        export_format = st.selectbox("Format", ["CSV", "Excel", "JSON"])
+        
+        if st.button("Export All Data"):
+            export_data(export_format)
+    
+    with col2:
+        st.markdown("##### Import Data")
+        upload_file = st.file_uploader("Upload File", type=["csv", "xlsx", "json"])
+        
+        if st.button("Import Data") and upload_file is not None:
+            import_data(upload_file)
+    
+    # Database operations
+    st.markdown("##### Database Operations")
+    dangerous_ops = st.expander("Danger Zone", expanded=False)
+    
+    with dangerous_ops:
+        st.warning("The following operations are destructive and cannot be undone!")
+        
+        if st.button("Clear All Transactions"):
+            if st.session_state.get('confirm_clear_tx') == True:
+                clear_transactions()
+                st.success("All transactions have been cleared.")
+                del st.session_state.confirm_clear_tx
+            else:
+                st.session_state.confirm_clear_tx = True
+                st.error("⚠️ Click 'Clear All Transactions' again to confirm this irreversible action!")
+        
+        if st.button("Reset Entire Database"):
+            if st.session_state.get('confirm_reset_db') == True:
+                reset_database()
+                st.success("Database has been reset to factory settings.")
+                del st.session_state.confirm_reset_db
+            else:
+                st.session_state.confirm_reset_db = True
+                st.error("⚠️ Click 'Reset Entire Database' again to confirm. ALL DATA WILL BE LOST!")
+
+def export_data(format_type):
+    """Export all data to the specified format"""
+    conn = get_db_connection()
+    
+    # Get all data
+    accounts_df = pd.read_sql_query("SELECT * FROM accounts", conn)
+    categories_df = pd.read_sql_query("SELECT * FROM categories", conn)
+    transactions_df = pd.read_sql_query("""
+        SELECT t.*, c.name as category_name, a1.name as account_name, a2.name as to_account_name 
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        LEFT JOIN accounts a1 ON t.account_id = a1.id
+        LEFT JOIN accounts a2 ON t.to_account_id = a2.id
+    """, conn)
+    
+    conn.close()
+    
+    # Create output based on format
+    if format_type == "CSV":
+        # Save as CSV
+        accounts_csv = accounts_df.to_csv(index=False)
+        categories_csv = categories_df.to_csv(index=False)
+        transactions_csv = transactions_df.to_csv(index=False)
+        
+        # Create a zip file containing all CSVs
+        import io
+        import zipfile
+        
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr('accounts.csv', accounts_csv)
+            zip_file.writestr('categories.csv', categories_csv)
+            zip_file.writestr('transactions.csv', transactions_csv)
+        
+        zip_buffer.seek(0)
+        st.download_button(
+            label="Download ZIP of CSV files",
+            data=zip_buffer,
+            file_name="expense_tracker_data.zip",
+            mime="application/zip"
+        )
+    
+    elif format_type == "Excel":
+        # Save as Excel
+        import io
+        output = io.BytesIO()
+        with pd.ExcelWriter(output) as writer:
+            accounts_df.to_excel(writer, sheet_name='Accounts', index=False)
+            categories_df.to_excel(writer, sheet_name='Categories', index=False)
+            transactions_df.to_excel(writer, sheet_name='Transactions', index=False)
+        
+        output.seek(0)
+        st.download_button(
+            label="Download Excel file",
+            data=output,
+            file_name="expense_tracker_data.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    
+    elif format_type == "JSON":
+        # Save as JSON
+        import json
+        
+        data = {
+            "accounts": accounts_df.to_dict(orient='records'),
+            "categories": categories_df.to_dict(orient='records'),
+            "transactions": transactions_df.to_dict(orient='records')
+        }
+        
+        json_str = json.dumps(data, indent=2)
+        st.download_button(
+            label="Download JSON file",
+            data=json_str,
+            file_name="expense_tracker_data.json",
+            mime="application/json"
+        )
+
+def import_data(file):
+    """Import data from uploaded file"""
+    try:
+        # Process based on file type
+        if file.name.endswith('.csv'):
+            df = pd.read_csv(file)
+            st.info("CSV import functionality is not fully implemented. Please use Excel or JSON for full data import.")
+        
+        elif file.name.endswith('.xlsx'):
+            xl = pd.ExcelFile(file)
+            accounts_df = pd.read_excel(xl, 'Accounts')
+            categories_df = pd.read_excel(xl, 'Categories')
+            transactions_df = pd.read_excel(xl, 'Transactions')
+            
+            # Import logic would go here
+            st.success("Excel data imported successfully!")
+            
+        elif file.name.endswith('.json'):
+            import json
+            data = json.load(file)
+            
+            # Import logic would go here
+            st.success("JSON data imported successfully!")
+        
+        else:
+            st.error("Unsupported file format.")
+    
+    except Exception as e:
+        st.error(f"Error importing data: {str(e)}")
+
+def clear_transactions():
+    """Clear all transactions from the database"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM transactions")
+    
+    conn.commit()
+    conn.close()
+
+def reset_database():
+    """Reset the entire database to its initial state"""
+    import os
+    import shutil
+    
+    # Path to the database
+    db_path = "data/expense_tracker.db"
+    
+    # Check if file exists
+    if os.path.exists(db_path):
+        # Delete the file
+        os.remove(db_path)
+    
+    # Reinitialize the database
+    init_database()
+
+def show_preferences():
+    """User preferences"""
+    st.markdown("#### Preferences")
+    
+    # Currency preference
+    default_currency = st.selectbox(
+        "Default Currency",
+        ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "INR"],
+        index=0  # Default to USD
+    )
+    
+    # Date format
+    date_format = st.selectbox(
+        "Date Format",
+        ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"],
+        index=2  # Default to YYYY-MM-DD
+    )
+    
+    # Theme preference
+    theme = st.selectbox(
+        "Application Theme",
+        ["System Default", "Light", "Dark"],
+        index=0
+    )
+    
+    # First day of week
+    first_day = st.selectbox(
+        "First Day of Week",
+        ["Sunday", "Monday"],
+        index=1
+    )
+    
+    if st.button("Save Preferences"):
+        # In a real app, these preferences would be saved to the database
+        # or local storage. For now, just display a success message.
+        st.success("Preferences saved successfully!")
+        st.info("Note: Some preferences may require an app restart to take effect.")

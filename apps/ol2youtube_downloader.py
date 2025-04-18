@@ -8,7 +8,6 @@ from pytube import YouTube
 import random
 import os
 import requests
-import webbrowser
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 
@@ -202,16 +201,6 @@ def show_youtube_downloader():
     </style>
     """, unsafe_allow_html=True)
     
-    # New session state variable to track if redirect is needed
-    if 'redirect_clicked' not in st.session_state:
-        st.session_state.redirect_clicked = False
-    
-    # Function to set redirect flag
-    def set_redirect():
-        st.session_state.redirect_clicked = True
-    
-    # Define the redirect URL
-    redirect_url = "https://093e6c49-4e56-41d3-aeab-98d3379ab34d-00-rykhxqi1xadr.worf.replit.dev/"
         
     url = st.text_input("YouTube Video URL", placeholder="https://www.youtube.com/watch?v=...")
     
@@ -220,16 +209,6 @@ def show_youtube_downloader():
         use_proxies = st.checkbox("Use Proxy Rotation (if available)", value=PROXIES != [])
         use_fallback = st.checkbox("Use Pytube fallback if transcript API fails", value=True)
         clear_cache = st.checkbox("Clear cache for this video", value=False)
-    
-    # Check if redirect was clicked in previous run
-    if st.session_state.redirect_clicked:
-        # This creates a more reliable redirect approach
-        st.markdown(f"""
-        <meta http-equiv="refresh" content="0;URL='{redirect_url}'" />
-        <p>Redirecting to alternative service...</p>
-        <a href="{redirect_url}" target="_blank">Click here if not redirected automatically</a>
-        """, unsafe_allow_html=True)
-        st.stop()
     
     if st.button("Get Transcript"):
         if not url:
@@ -274,11 +253,15 @@ def show_youtube_downloader():
         </div>
         """, unsafe_allow_html=True)
         
-        # Add a proceed button with more descriptive text, using on_click to set state
-        st.button("Proceed to Alternative Service", on_click=set_redirect)
-        
-        # Direct link as backup in case button doesn't work
-        st.markdown(f"<a href='{redirect_url}' target='_blank'>Alternative: Open service in new tab</a>", unsafe_allow_html=True)
+        # Add a proceed button with more descriptive text
+        if st.button("Proceed to Alternative Service"):
+            # Use JavaScript to redirect when button is clicked
+            js = f"""
+            <script>
+                window.location.href = "https://093e6c49-4e56-41d3-aeab-98d3379ab34d-00-rykhxqi1xadr.worf.replit.dev/";
+            </script>
+            """
+            st.markdown(js, unsafe_allow_html=True)
         
         # Now try to get the transcript - this code will still run but the error message
         # and redirect button will always appear above

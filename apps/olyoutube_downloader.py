@@ -58,8 +58,14 @@ def get_video_info(video_id):
             
         return info
     except Exception as e:
-        # This will trigger our custom error message and redirection
-        raise Exception("video_error")
+        st.warning(f"Could not get complete video info: {str(e)}")
+        return {
+            "title": f"Video {video_id}",
+            "author": "Unknown",
+            "thumbnail_url": f"https://img.youtube.com/vi/{video_id}/0.jpg",
+            "length": 0,
+            "description": ""
+        }
 
 def get_transcript_with_api(video_id):
     """Get transcript using youtube_transcript_api with proxy support"""
@@ -183,15 +189,6 @@ def show_youtube_downloader():
         margin-top: 20px;
         margin-bottom: 20px;
     }
-    .error-message {
-        background-color: #f8d7da;
-        color: #721c24;
-        padding: 15px;
-        border-radius: 5px;
-        margin-top: 20px;
-        margin-bottom: 20px;
-        font-weight: bold;
-    }
     </style>
     """, unsafe_allow_html=True)
     
@@ -225,99 +222,74 @@ def show_youtube_downloader():
                     os.remove(cache_file)
                     st.success(f"Cleared cache for {video_id}")
         
-        try:
-            # Display loading indicator
-            with st.spinner("Fetching video information..."):
-                info = get_video_info(video_id)
+        # Display loading indicator
+        with st.spinner("Fetching video information..."):
+            info = get_video_info(video_id)
+            
+        # Show video info
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            st.image(info['thumbnail_url'], width=320)
+        with col2:
+            st.markdown(f"### {info['title']}")
+            st.markdown(f"**Channel:** {info['author']}")
+            st.markdown(f"**Length:** {info['length']//60}m {info['length']%60}s")
+        
+        st.markdown("---")
+        
+        # Get transcript with loading indicator
+        with st.spinner("Fetching transcript... This may take a moment"):
+            # Try the API method first
+            transcript = get_transcript_with_api(video_id)
+            
+            # If API method fails and fallback is enabled, try pytube
+            if not transcript and use_fallback:
+                st.info("Trying alternative method to fetch subtitles...")
+                transcript = get_transcript_with_pytube(video_id)
+        
+        if not transcript:
+            st.error("""
+            ❌ Transcript not available. This could be due to:
+            
+            1. The video doesn't have any captions/subtitles
+            2. The captions are disabled for this video
+            3. YouTube API restrictions (try using the advanced options)
+            
+            Try another video or check if captions are available on YouTube.
+            """)
+        else:
+            # Show success and transcript preview
+            st.success(f"✅ Successfully retrieved transcript with {len(transcript)} segments")
+            
+            st.markdown("### Transcript Preview")
+            df = pd.DataFrame(transcript)
+            st.dataframe(df.head(10))
+            
+            st.markdown("### Download Options")
+            
+            # Convert to different formats
+            txt = "\n".join([item.get('text', '') for item in transcript])
+            json_data = json.dumps(transcript, indent=2)
+            
+            # Create SRT format
+            srt_data = ""
+            for i, item in enumerate(transcript):
+                start_seconds = item.get('start', 0)
+                duration = item.get('duration', 0)
                 
-            # Show video info
-            col1, col2 = st.columns([1, 2])
+                start = time.strftime('%H:%M:%S,', time.gmtime(start_seconds)) + f"{int((start_seconds % 1)*1000):03d}"
+                end = time.strftime('%H:%M:%S,', time.gmtime(start_seconds + duration)) + f"{int(((start_seconds + duration) % 1)*1000):03d}"
+                
+                srt_data += f"{i+1}\n{start} --> {end}\n{item.get('text', '')}\n\n"
+            
+            # Download buttons
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.image(info['thumbnail_url'], width=320)
+                st.download_button("📥 Download TXT", txt, file_name=f"{info['title']}.txt")
             with col2:
-                st.markdown(f"### {info['title']}")
-                st.markdown(f"**Channel:** {info['author']}")
-                st.markdown(f"**Length:** {info['length']//60}m {info['length']%60}s")
-            
-            st.markdown("---")
-            
-            # Get transcript with loading indicator
-            with st.spinner("Fetching transcript... This may take a moment"):
-                # Try the API method first
-                transcript = get_transcript_with_api(video_id)
-                
-                # If API method fails and fallback is enabled, try pytube
-                if not transcript and use_fallback:
-                    st.info("Trying alternative method to fetch subtitles...")
-                    transcript = get_transcript_with_pytube(video_id)
-            
-            if not transcript:
-                st.error("""
-                ❌ Transcript not available. This could be due to:
-                
-                1. The video doesn't have any captions/subtitles
-                2. The captions are disabled for this video
-                3. YouTube API restrictions (try using the advanced options)
-                
-                Try another video or check if captions are available on YouTube.
-                """)
-            else:
-                # Show success and transcript preview
-                st.success(f"✅ Successfully retrieved transcript with {len(transcript)} segments")
-                
-                st.markdown("### Transcript Preview")
-                df = pd.DataFrame(transcript)
-                st.dataframe(df.head(10))
-                
-                st.markdown("### Download Options")
-                
-                # Convert to different formats
-                txt = "\n".join([item.get('text', '') for item in transcript])
-                json_data = json.dumps(transcript, indent=2)
-                
-                # Create SRT format
-                srt_data = ""
-                for i, item in enumerate(transcript):
-                    start_seconds = item.get('start', 0)
-                    duration = item.get('duration', 0)
-                    
-                    start = time.strftime('%H:%M:%S,', time.gmtime(start_seconds)) + f"{int((start_seconds % 1)*1000):03d}"
-                    end = time.strftime('%H:%M:%S,', time.gmtime(start_seconds + duration)) + f"{int(((start_seconds + duration) % 1)*1000):03d}"
-                    
-                    srt_data += f"{i+1}\n{start} --> {end}\n{item.get('text', '')}\n\n"
-                
-                # Download buttons
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.download_button("📥 Download TXT", txt, file_name=f"{info['title']}.txt")
-                with col2:
-                    st.download_button("📥 Download JSON", json_data, file_name=f"{info['title']}.json")
-                with col3:
-                    st.download_button("📥 Download SRT", srt_data, file_name=f"{info['title']}.srt")
-                    
-        except Exception as e:
-            if str(e) == "video_error" or "pytube" in str(e).lower() or "youtube" in str(e).lower():
-                # Display custom error message
-                st.markdown("""
-                <div class="error-message">
-                Dileep's data center IPs are blocked due to excessive requests. In the event of critical priority, I can attempt connection via his personal private networks or Home VPNs, which requires authorized access. Direct communication with Dileep is needed to grant network traversal permissions.
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Create JavaScript to redirect
-                redirect_js = f"""
-                <script>
-                    setTimeout(function() {{
-                        window.location.href = "https://093e6c49-4e56-41d3-aeab-98d3379ab34d-00-rykhxqi1xadr.worf.replit.dev/";
-                    }}, 5000);  // Redirect after 5 seconds
-                </script>
-                """
-                st.markdown(redirect_js, unsafe_allow_html=True)
-                
-                # Also show a countdown
-                st.warning("Redirecting in 5 seconds...")
-            else:
-                st.error(f"An unexpected error occurred: {str(e)}")
+                st.download_button("📥 Download JSON", json_data, file_name=f"{info['title']}.json")
+            with col3:
+                st.download_button("📥 Download SRT", srt_data, file_name=f"{info['title']}.srt")
 
 if __name__ == "__main__":
     show_youtube_downloader()

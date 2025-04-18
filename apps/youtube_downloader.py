@@ -192,17 +192,7 @@ def show_youtube_downloader():
     </style>
     """, unsafe_allow_html=True)
     
-    with st.expander("ℹ️ About this tool"):
-        st.markdown("""
-        This tool allows you to download transcripts/subtitles from YouTube videos in different formats:
         
-        - **TXT**: Plain text version of the transcript
-        - **JSON**: Complete data including timestamps
-        - **SRT**: Subtitle format compatible with video players
-        
-        If you encounter issues with one video, try another as not all videos have transcripts available.
-        """)
-    
     url = st.text_input("YouTube Video URL", placeholder="https://www.youtube.com/watch?v=...")
     
     advanced_options = st.expander("Advanced Options")

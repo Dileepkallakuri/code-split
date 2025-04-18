@@ -202,7 +202,14 @@ def save_transaction(transaction: Transaction) -> int:
 
 def get_transactions(start_date=None, end_date=None, 
                      account_id=None, category_id=None, 
-                     transaction_type=None) -> List[Dict]:
+                     transaction_type=None, limit=None) -> List[Dict]:
+    
+     # Add limit to the query
+    if limit:
+        query += " LIMIT ?"
+        params.append(limit)
+
+
     """Fetch transactions with filters"""
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row  # Return rows as dictionaries
@@ -290,6 +297,8 @@ def show_transactions_page():
     st.subheader("Recent Transactions")
     show_recent_transactions()
 
+# Fix for the missing submit button and "None is not in list" error
+
 def show_expense_form():
     """Form for adding expenses"""
     with st.form("expense_form"):
@@ -301,18 +310,47 @@ def show_expense_form():
         
         # Get expense categories
         expense_categories = get_categories(type_filter="expense")
+        
+        # Safety check for categories
+        if not expense_categories:
+            st.error("No expense categories found. Please add categories first.")
+            submitted = st.form_submit_button("Save")
+            return
+            
         category_options = [f"{cat.icon} {cat.name}" for cat in expense_categories]
         category_selected = st.selectbox("Category", category_options)
-        selected_category_id = expense_categories[category_options.index(category_selected)].id
+        
+        # Safety check for category selection
+        if category_selected and category_selected in category_options:
+            selected_category_id = expense_categories[category_options.index(category_selected)].id
+        else:
+            st.error("Please select a valid category")
+            submitted = st.form_submit_button("Save")
+            return
         
         # Account selection
         accounts = get_accounts()
+        
+        # Safety check for accounts
+        if not accounts:
+            st.error("No accounts found. Please add an account first.")
+            submitted = st.form_submit_button("Save")
+            return
+            
         account_options = [account.name for account in accounts]
         account_selected = st.selectbox("From Account", account_options)
-        selected_account_id = accounts[account_options.index(account_selected)].id
+        
+        # Safety check for account selection
+        if account_selected and account_selected in account_options:
+            selected_account_id = accounts[account_options.index(account_selected)].id
+        else:
+            st.error("Please select a valid account")
+            submitted = st.form_submit_button("Save")
+            return
         
         description = st.text_area("Note", height=100)
         
+        # Add submit button
         submitted = st.form_submit_button("Save")
         
         if submitted and amount > 0:
@@ -332,8 +370,43 @@ def show_expense_form():
 
 def show_income_form():
     """Form for adding income"""
-    # Implementation similar to expense form but for income
-    pass
+    with st.form("income_form"):
+        st.subheader("Add Income")
+        
+        date = st.date_input("Date", value=st.session_state.transaction_date)
+        
+        amount = st.number_input("Amount", min_value=0.01, step=1.0)
+        
+        # Get income categories
+        income_categories = get_categories(type_filter="income")
+        category_options = [f"{cat.icon} {cat.name}" for cat in income_categories]
+        category_selected = st.selectbox("Category", category_options)
+        selected_category_id = income_categories[category_options.index(category_selected)].id
+        
+        # Account selection
+        accounts = get_accounts()
+        account_options = [account.name for account in accounts]
+        account_selected = st.selectbox("To Account", account_options)
+        selected_account_id = accounts[account_options.index(account_selected)].id
+        
+        description = st.text_area("Note", height=100)
+        
+        submitted = st.form_submit_button("Save")
+        
+        if submitted and amount > 0:
+            transaction = Transaction(
+                id=None,
+                type="income",
+                amount=amount,
+                date=date.strftime("%Y-%m-%d"),
+                category_id=selected_category_id,
+                account_id=selected_account_id,
+                to_account_id=None,
+                description=description
+            )
+            save_transaction(transaction)
+            st.success("Income saved successfully!")
+            st.session_state.transaction_date = date  # Remember the date for next entry
 
 def show_transfer_form():
     """Form for transfers between accounts"""
@@ -346,20 +419,48 @@ def show_transfer_form():
         
         # Account selections
         accounts = get_accounts()
+        
+        # Safety check for accounts
+        if not accounts or len(accounts) < 2:
+            st.error("You need at least two accounts to make transfers. Please add accounts first.")
+            submitted = st.form_submit_button("Save")
+            return
+            
         account_options = [account.name for account in accounts]
         
         from_account = st.selectbox("From Account", account_options)
-        selected_from_id = accounts[account_options.index(from_account)].id
+        
+        # Safety check for account selection
+        if from_account and from_account in account_options:
+            selected_from_id = accounts[account_options.index(from_account)].id
+        else:
+            st.error("Please select a valid 'From' account")
+            submitted = st.form_submit_button("Save")
+            return
         
         # Filter out the selected "from" account
         to_accounts = [acc for acc in accounts if acc.id != selected_from_id]
         to_account_options = [account.name for account in to_accounts]
         
+        # Safety check for "to" accounts
+        if not to_account_options:
+            st.error("No available accounts to transfer to. Please add another account.")
+            submitted = st.form_submit_button("Save")
+            return
+            
         to_account = st.selectbox("To Account", to_account_options)
-        selected_to_id = to_accounts[to_account_options.index(to_account)].id
         
+        # Safety check for "to" account selection
+        if to_account and to_account in to_account_options:
+            selected_to_id = to_accounts[to_account_options.index(to_account)].id
+        else:
+            st.error("Please select a valid 'To' account")
+            submitted = st.form_submit_button("Save")
+            return
+            
         description = st.text_area("Note", height=100)
         
+        # Add submit button
         submitted = st.form_submit_button("Save")
         
         if submitted and amount > 0:
@@ -461,6 +562,53 @@ def show_daily_transactions():
                 st.divider()
     else:
         st.info("No transactions for this date.")
+        
+# Fix for the missing limit parameter in get_transactions
+def get_transactions(start_date=None, end_date=None, 
+                     account_id=None, category_id=None, 
+                     transaction_type=None, limit=None) -> List[Dict]:
+    """Fetch transactions with filters"""
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row  # Return rows as dictionaries
+    cursor = conn.cursor()
+    
+    query = '''
+    SELECT t.*, c.name as category_name, c.icon as category_icon, 
+           a.name as account_name, a2.name as to_account_name
+    FROM transactions t
+    LEFT JOIN categories c ON t.category_id = c.id
+    JOIN accounts a ON t.account_id = a.id
+    LEFT JOIN accounts a2 ON t.to_account_id = a2.id
+    WHERE 1=1
+    '''
+    params = []
+    
+    if start_date:
+        query += " AND t.date >= ?"
+        params.append(start_date)
+    if end_date:
+        query += " AND t.date <= ?"
+        params.append(end_date)
+    if account_id:
+        query += " AND (t.account_id = ? OR t.to_account_id = ?)"
+        params.extend([account_id, account_id])
+    if category_id:
+        query += " AND t.category_id = ?"
+        params.append(category_id)
+    if transaction_type:
+        query += " AND t.type = ?"
+        params.append(transaction_type)
+    
+    query += " ORDER BY t.date DESC, t.created_at DESC"
+    
+    if limit:
+        query += " LIMIT ?"
+        params.append(limit)
+    
+    cursor.execute(query, params)
+    transactions = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return transactions
 
 def show_dashboard():
     """Show the main dashboard with overview"""
@@ -512,6 +660,7 @@ def show_dashboard():
         st.session_state.selected_nav = "Transactions"
         st.rerun()
 
+# Fix for show_recent_transactions function
 def show_recent_transactions(limit=10):
     """Show a list of recent transactions"""
     transactions = get_transactions(limit=limit)
@@ -522,18 +671,19 @@ def show_recent_transactions(limit=10):
     
     for tx in transactions:
         with st.container():
-            col1, col2, col3 = st.columns([1, 3, 1])
+            cols = st.columns([1, 3, 1])
+            col1, col2, col3 = cols
             
             with col1:
                 st.text(tx['date'])
             
             with col2:
                 if tx['type'] == 'expense':
-                    st.markdown(f"**{tx['category_icon']} {tx['category_name']}** - {tx['account_name']}")
+                    st.markdown(f"**{tx.get('category_icon', '❓')} {tx.get('category_name', 'Uncategorized')}** - {tx['account_name']}")
                 elif tx['type'] == 'income':
-                    st.markdown(f"**{tx['category_icon']} {tx['category_name']}** - {tx['account_name']}")
+                    st.markdown(f"**{tx.get('category_icon', '❓')} {tx.get('category_name', 'Uncategorized')}** - {tx['account_name']}")
                 else:  # transfer
-                    st.markdown(f"**Transfer** - {tx['account_name']} → {tx['to_account_name']}")
+                    st.markdown(f"**Transfer** - {tx['account_name']} → {tx.get('to_account_name', 'Unknown')}")
                 if tx['description']:
                     st.text(tx['description'])
             

@@ -215,65 +215,48 @@ def display_activities_by_day(itinerary, days, start_date, itineraries, save_cal
                 st.info(f"No activities planned for Day {day} yet.")
             else:
                 for i, activity in enumerate(day_activities):
-                    col1, col2 = st.columns([1, 5])
-                    
-                    with col1:
-                        st.markdown(f"<div style='text-align: right; padding-right: 15px; font-weight: bold;'>{activity['time']}</div>", unsafe_allow_html=True)
-                    
-                    with col2:
-                        # Generate the appropriate icon based on activity type
-                        icon = get_activity_icon(activity)
-                        activity_color = get_activity_color(activity['type'])
+                    # Use Streamlit's native components instead of custom HTML
+                    with st.container():
+                        cols = st.columns([1, 5])
                         
-                        # Create a container for the activity card
-                        with st.container():
-                            # Type information
+                        # Time column
+                        with cols[0]:
+                            st.markdown(f"**{activity['time']}**")
+                        
+                        # Activity details column
+                        with cols[1]:
+                            # Create a container with colored border using minimal HTML
+                            activity_color = get_activity_color(activity['type'])
+                            st.markdown(f"<div style='border-left: 4px solid {activity_color}; padding-left: 10px;'>", unsafe_allow_html=True)
+                            
+                            # Activity icon and name
+                            icon = get_activity_icon(activity)
+                            st.markdown(f"### {icon} {activity['name']} ({activity['duration']} min)")
+                            
+                            # Activity type information
                             type_info = f"{activity['type']}"
                             if activity.get('transport_type'):
                                 type_info += f" - {activity['transport_type']}"
+                            st.markdown(f"*{type_info}*")
                             
-                            # Render the activity header with name, duration, and type
-                            st.markdown(f"""
-                                <div style='background-color: #1E1E2E; border-radius: 10px; padding: 15px; 
-                                          margin-bottom: 20px; border-left: 4px solid {activity_color};'>
-                                    <div style='display: flex; justify-content: space-between; margin-bottom: 8px;'>
-                                        <div>
-                                            <span style='font-size: 16px; font-weight: bold;'>{icon} {activity['name']}</span>
-                                            <span style='color: #888; font-size: 14px;'> ({activity['duration']} min)</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div style='color: #888; font-size: 14px; margin-bottom: 5px;'>
-                                        {type_info}
-                                    </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Render location if it exists
+                            # Location if available
                             if activity['location']:
-                                st.markdown(f"""
-                                    <div style='margin-top: 8px;'>
-                                        <span style='color: #888;'>📍</span> {activity['location']}
-                                    </div>
-                                """, unsafe_allow_html=True)
+                                st.markdown(f"📍 {activity['location']}")
                             
-                            # Render notes if they exist
+                            # Notes if available
                             if activity['notes']:
-                                st.markdown(f"""
-                                    <div style='margin-top: 8px; font-style: italic; color: #888;'>
-                                        <span style='color: #888;'>📝</span> {activity['notes']}
-                                    </div>
-                                """, unsafe_allow_html=True)
+                                st.markdown(f"📝 *{activity['notes']}*")
                             
-                            # Close the main div
+                            # Close the div
                             st.markdown("</div>", unsafe_allow_html=True)
                             
-                            # Regular Streamlit buttons for edit and delete
-                            col1, col2 = st.columns(2)
-                            with col1:
+                            # Action buttons
+                            button_cols = st.columns(2)
+                            with button_cols[0]:
                                 if st.button("Edit", key=f"edit_{activity['id']}"):
                                     st.session_state.editing_activity = activity["id"]
                                     st.rerun()
-                            with col2:
+                            with button_cols[1]:
                                 if st.button("Delete", key=f"delete_{activity['id']}"):
                                     itinerary["activities"].remove(activity)
                                     save_callback()

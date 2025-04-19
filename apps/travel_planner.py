@@ -142,13 +142,20 @@ def add_new_activity(itinerary, days, itineraries, save_callback):
     with col1:
         day_num = st.selectbox("Day", list(range(1, days + 1)))
         activity_type = st.selectbox("Activity Type", [
-            "Transportation", "Accommodation", "Sightseeing", "Food", "Meeting", 
-            "Activity", "Rest", "Other"
+            "Food", "Accommodation", "Sightseeing", "Meeting", 
+            "Activity", "Rest", "Transportation", "Other"
         ])
-        
+    
     with col2:
         activity_time = st.time_input("Time", datetime.strptime("09:00", "%H:%M").time())
         activity_duration = st.number_input("Duration (minutes)", min_value=15, value=60, step=15)
+    
+    # If Transportation is selected, show additional options
+    transport_type = None
+    if activity_type == "Transportation":
+        transport_type = st.selectbox("Transport Type", [
+            "Flight", "Bus", "Train", "Cab/Taxi", "Ship/Ferry", "Car Rental", "Other"
+        ])
     
     activity_name = st.text_input("Activity Name", "")
     activity_location = st.text_input("Location/Address", "")
@@ -165,6 +172,7 @@ def add_new_activity(itinerary, days, itineraries, save_callback):
                 "id": str(uuid.uuid4()),
                 "name": activity_name,
                 "type": activity_type,
+                "transport_type": transport_type if transport_type else None,
                 "time": activity_time.strftime("%H:%M"),
                 "duration": activity_duration,
                 "location": activity_location,
@@ -206,75 +214,54 @@ def display_activities_by_day(itinerary, days, start_date, itineraries, save_cal
             if not day_activities:
                 st.info(f"No activities planned for Day {day} yet.")
             else:
-                # Create a container for the timeline
-                timeline_container = st.container()
-                
-                with timeline_container:
-                    for i, activity in enumerate(day_activities):
-                        # Start of timeline item
-                        col1, col2 = st.columns([1, 5])
+                for i, activity in enumerate(day_activities):
+                    col1, col2 = st.columns([1, 5])
+                    
+                    with col1:
+                        st.markdown(f"<div style='text-align: right; padding-right: 15px; font-weight: bold;'>{activity['time']}</div>", unsafe_allow_html=True)
+                    
+                    with col2:
+                        # Generate the appropriate icon based on activity type
+                        icon = get_activity_icon(activity)
+                        activity_color = get_activity_color(activity['type'])
                         
-                        with col1:
-                            # Time column
-                            st.markdown(f"""
-                            <div style='text-align: right; padding-right: 15px; position: relative;'>
-                                <div style='font-weight: bold; font-size: 18px; color: #E0E0E0;'>{activity['time']}</div>
-                                <div style='position: absolute; top: 0; right: -10px; width: 20px; height: 20px; 
-                                           border-radius: 50%; background-color: #2196F3; z-index: 2;'></div>
-                                {'<div style="position: absolute; top: 20px; right: -1px; height: 100%; width: 2px; background-color: #555; z-index: 1;"></div>' 
-                                if i < len(day_activities) - 1 else ''}
-                            </div>
-                            """, unsafe_allow_html=True)
-                        
-                        with col2:
-                            # Activity details in a card
-                            icon = get_activity_icon(activity['type'])
-                            activity_color = get_activity_color(activity['type'])
-                            
+                        # Create the activity card
+                        with st.container():
                             st.markdown(f"""
                             <div style='background-color: #1E1E2E; border-radius: 10px; padding: 15px; 
                                        margin-bottom: 20px; border-left: 4px solid {activity_color};'>
-                                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                <div style='display: flex; justify-content: space-between; margin-bottom: 8px;'>
                                     <div>
-                                        <div style='font-size: 16px; font-weight: bold;'>
-                                            {icon} {activity['name']} <span style='color: #888; font-weight: normal;'>({activity['duration']} min)</span>
-                                        </div>
-                                        <div style='font-size: 14px; color: #888; margin-top: 5px;'>
-                                            {activity['type']}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <button onclick="document.getElementById('edit_{activity['id']}').click();" 
-                                                style='background: none; border: 1px solid #555; color: #E0E0E0; 
-                                                        border-radius: 4px; padding: 3px 8px; margin-right: 5px; cursor: pointer;'>
-                                            Edit
-                                        </button>
-                                        <button onclick="document.getElementById('delete_{activity['id']}').click();" 
-                                                style='background: none; border: 1px solid #555; color: #E0E0E0; 
-                                                        border-radius: 4px; padding: 3px 8px; cursor: pointer;'>
-                                            Delete
-                                        </button>
+                                        <span style='font-size: 16px; font-weight: bold;'>{icon} {activity['name']}</span>
+                                        <span style='color: #888; font-size: 14px;'> ({activity['duration']} min)</span>
                                     </div>
                                 </div>
-                                
+
+                                <div style='color: #888; font-size: 14px; margin-bottom: 5px;'>
+                                    {activity['type']} {f"- {activity['transport_type']}" if activity.get('transport_type') else ""}
+                                </div>
+
                                 {f'<div style="margin-top: 8px;"><span style="color: #888;">📍</span> {activity["location"]}</div>' if activity['location'] else ''}
-                                {f'<div style="margin-top: 8px; font-style: italic; color: #888;">Note: {activity["notes"]}</div>' if activity['notes'] else ''}
+                                {f'<div style="margin-top: 8px; font-style: italic; color: #888;"><span style="color: #888;">📝</span> {activity["notes"]}</div>' if activity['notes'] else ''}
                             </div>
                             """, unsafe_allow_html=True)
                             
-                            # Hidden buttons for Streamlit to handle
-                            if st.button("Edit", key=f"edit_{activity['id']}", help="Edit this activity"):
-                                st.session_state.editing_activity = activity["id"]
-                                st.rerun()
-                            if st.button("Delete", key=f"delete_{activity['id']}", help="Delete this activity"):
-                                itinerary["activities"].remove(activity)
-                                save_callback()
-                                st.success("Activity deleted!")
-                                st.rerun()
+                            # Regular Streamlit buttons for edit and delete
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("Edit", key=f"edit_{activity['id']}"):
+                                    st.session_state.editing_activity = activity["id"]
+                                    st.rerun()
+                            with col2:
+                                if st.button("Delete", key=f"delete_{activity['id']}"):
+                                    itinerary["activities"].remove(activity)
+                                    save_callback()
+                                    st.success("Activity deleted!")
+                                    st.rerun()
             
-            # Edit activity form (same as before)
+            # Edit activity form
             if st.session_state.editing_activity:
-                edit_activity = next((a for a in day_activities if a["id"] == st.session_state.editing_activity), None)
+                edit_activity = next((a for a in activities if a["id"] == st.session_state.editing_activity), None)
                 if edit_activity:
                     st.markdown("---")
                     st.subheader("Edit Activity")
@@ -284,14 +271,23 @@ def display_activities_by_day(itinerary, days, start_date, itineraries, save_cal
                     with col1:
                         edit_day = st.selectbox("Day", list(range(1, days + 1)), index=edit_activity["day"]-1, key="edit_day")
                         edit_type = st.selectbox("Activity Type", [
-                            "Transportation", "Accommodation", "Sightseeing", "Food", "Meeting", 
-                            "Activity", "Rest", "Other"
-                        ], index=["Transportation", "Accommodation", "Sightseeing", "Food", "Meeting", 
-                            "Activity", "Rest", "Other"].index(edit_activity["type"]), key="edit_type")
+                            "Food", "Accommodation", "Sightseeing", "Meeting", 
+                            "Activity", "Rest", "Transportation", "Other"
+                        ], index=["Food", "Accommodation", "Sightseeing", "Meeting", 
+                            "Activity", "Rest", "Transportation", "Other"].index(edit_activity["type"]), key="edit_type")
                     
                     with col2:
                         edit_time = st.time_input("Time", datetime.strptime(edit_activity["time"], "%H:%M").time(), key="edit_time")
                         edit_duration = st.number_input("Duration (minutes)", min_value=15, value=edit_activity["duration"], step=15, key="edit_duration")
+                    
+                    # If Transportation is selected, show additional options
+                    edit_transport_type = None
+                    if edit_type == "Transportation":
+                        transport_options = ["Flight", "Bus", "Train", "Cab/Taxi", "Ship/Ferry", "Car Rental", "Other"]
+                        default_idx = 0
+                        if edit_activity.get("transport_type") and edit_activity["transport_type"] in transport_options:
+                            default_idx = transport_options.index(edit_activity["transport_type"])
+                        edit_transport_type = st.selectbox("Transport Type", transport_options, index=default_idx, key="edit_transport_type")
                     
                     edit_name = st.text_input("Activity Name", edit_activity["name"], key="edit_name")
                     edit_location = st.text_input("Location/Address", edit_activity["location"], key="edit_location")
@@ -303,6 +299,7 @@ def display_activities_by_day(itinerary, days, start_date, itineraries, save_cal
                             # Update activity
                             edit_activity["name"] = edit_name
                             edit_activity["type"] = edit_type
+                            edit_activity["transport_type"] = edit_transport_type if edit_transport_type else None
                             edit_activity["time"] = edit_time.strftime("%H:%M")
                             edit_activity["duration"] = edit_duration
                             edit_activity["location"] = edit_location
@@ -323,7 +320,27 @@ def display_activities_by_day(itinerary, days, start_date, itineraries, save_cal
                             st.session_state.editing_activity = None
                             st.rerun()
 
-def get_activity_icon(activity_type):
+def get_activity_icon(activity):
+    """Get icon based on activity type with transport-specific icons"""
+    if activity['type'] == "Transportation":
+        # Transport-specific icons
+        transport_type = activity.get('transport_type', '').lower()
+        if "flight" in transport_type:
+            return "✈️"
+        elif "bus" in transport_type:
+            return "🚌"
+        elif "train" in transport_type:
+            return "🚆"
+        elif "cab" in transport_type or "taxi" in transport_type:
+            return "🚕"
+        elif "ship" in transport_type or "ferry" in transport_type:
+            return "🚢"
+        elif "car" in transport_type:
+            return "🚗"
+        else:
+            return "🚗"
+    
+    # Standard activity icons
     icons = {
         "Transportation": "🚗",
         "Accommodation": "🏨",
@@ -334,7 +351,7 @@ def get_activity_icon(activity_type):
         "Rest": "😴",
         "Other": "📝"
     }
-    return icons.get(activity_type, "📌")
+    return icons.get(activity['type'], "📌")
 
 def get_activity_color(activity_type):
     colors = {
@@ -352,11 +369,6 @@ def get_activity_color(activity_type):
 def add_timeline_styles():
     st.markdown("""
     <style>
-        /* Hide the actual Streamlit buttons that we're using for state management */
-        button[data-testid="baseButton-secondary"] {
-            display: none;
-        }
-        
         /* Timeline styling */
         .timeline-content {
             margin-left: 20px;
@@ -381,6 +393,14 @@ def add_timeline_styles():
             padding: 15px;
             margin-bottom: 20px;
             border-left: 4px solid #2196F3;
+        }
+        
+        /* Make buttons look better */  
+        .stButton button {
+            width: 100%;
+            border-radius: 5px;
+            padding: 4px 8px;
+            font-size: 14px;
         }
     </style>
     """, unsafe_allow_html=True)

@@ -27,6 +27,7 @@ AVAILABLE_APPS = [
     "🗓️ Daily Expense Tracker",
     "🥇 Gold Price Live",
     "💡 SparkStorm & IdeaFlow"
+    "🧳 Travel Itinerary Planner"
 ]
 
 # ---- Login Screen ----

@@ -562,7 +562,7 @@ def show_daily_transactions():
                 st.divider()
     else:
         st.info("No transactions for this date.")
-        
+
 # Fix for the missing limit parameter in get_transactions
 def get_transactions(start_date=None, end_date=None, 
                      account_id=None, category_id=None, 
@@ -646,11 +646,11 @@ def show_dashboard():
     # Show summary
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Income", f"${total_income:.2f}")
+        st.metric("Income", f"{total_income:.2f}")
     with col2:
-        st.metric("Expenses", f"${total_expenses:.2f}")
+        st.metric("Expenses", f"{total_expenses:.2f}")
     with col3:
-        st.metric("Balance", f"${(total_income - total_expenses):.2f}")
+        st.metric("Balance", f"{(total_income - total_expenses):.2f}")
     
     # Recent transactions
     st.markdown("#### Recent Transactions")
@@ -733,11 +733,11 @@ def show_statistics_page():
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Income", f"${total_income:.2f}")
+        st.metric("Total Income", f"{total_income:.2f}")
     with col2:
-        st.metric("Total Expenses", f"${total_expenses:.2f}")
+        st.metric("Total Expenses", f"{total_expenses:.2f}")
     with col3:
-        st.metric("Balance", f"${balance:.2f}")
+        st.metric("Balance", f"{balance:.2f}")
     
     # Charts
     tab1, tab2, tab3 = st.tabs(["Income vs. Expenses", "Expense Breakdown", "Trends"])

@@ -26,7 +26,7 @@ AVAILABLE_APPS = [
     "📝 YouTube Transcript Downloader",
     "🗓️ Daily Expense Tracker",
     "🥇 Gold Price Live",
-    "💡 SparkStorm & IdeaFlow"
+    "💡 SparkStorm & IdeaFlow",
     "🧳 Travel Itinerary Planner"
 ]
 

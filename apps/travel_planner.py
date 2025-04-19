@@ -8,6 +8,7 @@ import uuid
 
 def show_travel_planner():
     st.title("🧳 Travel Itinerary Planner")
+    add_timeline_styles()
     
     # Create data directory if it doesn't exist
     if not os.path.exists("data"):
@@ -194,49 +195,88 @@ def display_activities_by_day(itinerary, days, start_date, itineraries, save_cal
         # Sort activities by time
         activities_by_day[day]["activities"].sort(key=lambda x: x["time"])
     
-    # Display activities for each day
+    # Display activities for each day with tabs
     tabs = st.tabs([f"Day {day}" for day in range(1, days + 1)])
     
     for day, tab in enumerate(tabs, 1):
         with tab:
-            st.subheader(activities_by_day[day]["date_str"])
+            st.markdown(f"<h2 style='color: #4CAF50;'>{activities_by_day[day]['date_str']}</h2>", unsafe_allow_html=True)
             
             day_activities = activities_by_day[day]["activities"]
             if not day_activities:
                 st.info(f"No activities planned for Day {day} yet.")
             else:
-                for activity in day_activities:
-                    col1, col2, col3 = st.columns([1, 3, 1])
-                    
-                    with col1:
-                        st.write(f"**{activity['time']}**")
-                        icon = get_activity_icon(activity['type'])
-                        st.write(f"{icon} {activity['type']}")
-                    
-                    with col2:
-                        st.write(f"**{activity['name']}**")
-                        if activity['location']:
-                            st.write(f"📍 {activity['location']}")
-                        if activity['notes']:
-                            st.write(f"_Note: {activity['notes']}_")
-                    
-                    with col3:
-                        st.write(f"{activity['duration']} min")
-                        if st.button("Edit", key=f"edit_{activity['id']}"):
-                            st.session_state.editing_activity = activity["id"]
-                            st.rerun()
-                        if st.button("Delete", key=f"delete_{activity['id']}"):
-                            itinerary["activities"].remove(activity)
-                            save_callback()
-                            st.success("Activity deleted!")
-                            st.rerun()
-                    
-                    st.divider()
+                # Create a container for the timeline
+                timeline_container = st.container()
+                
+                with timeline_container:
+                    for i, activity in enumerate(day_activities):
+                        # Start of timeline item
+                        col1, col2 = st.columns([1, 5])
+                        
+                        with col1:
+                            # Time column
+                            st.markdown(f"""
+                            <div style='text-align: right; padding-right: 15px; position: relative;'>
+                                <div style='font-weight: bold; font-size: 18px; color: #E0E0E0;'>{activity['time']}</div>
+                                <div style='position: absolute; top: 0; right: -10px; width: 20px; height: 20px; 
+                                           border-radius: 50%; background-color: #2196F3; z-index: 2;'></div>
+                                {'<div style="position: absolute; top: 20px; right: -1px; height: 100%; width: 2px; background-color: #555; z-index: 1;"></div>' 
+                                if i < len(day_activities) - 1 else ''}
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        with col2:
+                            # Activity details in a card
+                            icon = get_activity_icon(activity['type'])
+                            activity_color = get_activity_color(activity['type'])
+                            
+                            st.markdown(f"""
+                            <div style='background-color: #1E1E2E; border-radius: 10px; padding: 15px; 
+                                       margin-bottom: 20px; border-left: 4px solid {activity_color};'>
+                                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                    <div>
+                                        <div style='font-size: 16px; font-weight: bold;'>
+                                            {icon} {activity['name']} <span style='color: #888; font-weight: normal;'>({activity['duration']} min)</span>
+                                        </div>
+                                        <div style='font-size: 14px; color: #888; margin-top: 5px;'>
+                                            {activity['type']}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button onclick="document.getElementById('edit_{activity['id']}').click();" 
+                                                style='background: none; border: 1px solid #555; color: #E0E0E0; 
+                                                        border-radius: 4px; padding: 3px 8px; margin-right: 5px; cursor: pointer;'>
+                                            Edit
+                                        </button>
+                                        <button onclick="document.getElementById('delete_{activity['id']}').click();" 
+                                                style='background: none; border: 1px solid #555; color: #E0E0E0; 
+                                                        border-radius: 4px; padding: 3px 8px; cursor: pointer;'>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {f'<div style="margin-top: 8px;"><span style="color: #888;">📍</span> {activity["location"]}</div>' if activity['location'] else ''}
+                                {f'<div style="margin-top: 8px; font-style: italic; color: #888;">Note: {activity["notes"]}</div>' if activity['notes'] else ''}
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Hidden buttons for Streamlit to handle
+                            if st.button("Edit", key=f"edit_{activity['id']}", help="Edit this activity"):
+                                st.session_state.editing_activity = activity["id"]
+                                st.rerun()
+                            if st.button("Delete", key=f"delete_{activity['id']}", help="Delete this activity"):
+                                itinerary["activities"].remove(activity)
+                                save_callback()
+                                st.success("Activity deleted!")
+                                st.rerun()
             
-            # Edit activity form
+            # Edit activity form (same as before)
             if st.session_state.editing_activity:
                 edit_activity = next((a for a in day_activities if a["id"] == st.session_state.editing_activity), None)
                 if edit_activity:
+                    st.markdown("---")
                     st.subheader("Edit Activity")
                     
                     col1, col2 = st.columns(2)
@@ -295,6 +335,55 @@ def get_activity_icon(activity_type):
         "Other": "📝"
     }
     return icons.get(activity_type, "📌")
+
+def get_activity_color(activity_type):
+    colors = {
+        "Transportation": "#2196F3",  # Blue
+        "Accommodation": "#9C27B0",   # Purple
+        "Sightseeing": "#4CAF50",     # Green
+        "Food": "#FF9800",            # Orange
+        "Meeting": "#E91E63",         # Pink
+        "Activity": "#00BCD4",        # Cyan
+        "Rest": "#795548",            # Brown
+        "Other": "#607D8B"            # Blue Grey
+    }
+    return colors.get(activity_type, "#607D8B")
+
+def add_timeline_styles():
+    st.markdown("""
+    <style>
+        /* Hide the actual Streamlit buttons that we're using for state management */
+        button[data-testid="baseButton-secondary"] {
+            display: none;
+        }
+        
+        /* Timeline styling */
+        .timeline-content {
+            margin-left: 20px;
+            padding-left: 20px;
+            border-left: 2px solid #555;
+            position: relative;
+        }
+        
+        .timeline-dot {
+            position: absolute;
+            left: -10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #2196F3;
+        }
+        
+        /* Activity card styling */
+        .activity-card {
+            background-color: #1E1E2E;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 def export_itinerary(itinerary):
     activities = sorted(itinerary["activities"], key=lambda x: (x["day"], x["time"]))

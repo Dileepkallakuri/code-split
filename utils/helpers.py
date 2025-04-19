@@ -7,10 +7,10 @@ def load_app_module(app_mode):
         "📈 Crypto Trade Tracker": ("apps.crypto_tracker", "main"),
         "📊 Stocks Journal": ("apps.stocks_journal", "show_stocks_journal"),
         "🗄️ Database & Cloud": ("apps.database_cloud", "show_database_cloud"),
-        "📝 YouTube Transcript Downloader": ("apps.youtube_downloader", "show_youtube_downloader"),
         "🗓️ Daily Expense Tracker": ("apps.expense_tracker", "show_expense_tracker"),
-        "🧳 Travel Itinerary Planner": ("apps.travel_planner", "show_travel_planner"),
+        "🛫 Travel Itinerary Planner": ("apps.travel_planner", "show_travel_planner"),
         "💡 SparkStorm & IdeaFlow": ("apps.sparkstorm", "show_sparkstorm"),
+        "📝 YouTube Transcript Downloader": ("apps.youtube_downloader", "show_youtube_downloader"),
         "🥇 Gold Price Live": ("apps.gold_price", "show_gold_price"),
          
     }

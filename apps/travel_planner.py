@@ -225,100 +225,47 @@ def display_activities_by_day(itinerary, days, start_date, itineraries, save_cal
                         icon = get_activity_icon(activity)
                         activity_color = get_activity_color(activity['type'])
                         
-                        # Create the activity card
-                        with st.container():
-                            st.markdown(f"""
-                            <div style='background-color: #1E1E2E; border-radius: 10px; padding: 15px; 
-                                       margin-bottom: 20px; border-left: 4px solid {activity_color};'>
-                                <div style='display: flex; justify-content: space-between; margin-bottom: 8px;'>
-                                    <div>
-                                        <span style='font-size: 16px; font-weight: bold;'>{icon} {activity['name']}</span>
-                                        <span style='color: #888; font-size: 14px;'> ({activity['duration']} min)</span>
-                                    </div>
+                        # Create location and notes HTML if they exist
+                        location_html = ""
+                        if activity['location']:
+                            location_html = f'<div style="margin-top: 8px;"><span style="color: #888;">📍</span> {activity["location"]}</div>'
+                        
+                        notes_html = ""
+                        if activity['notes']:
+                            notes_html = f'<div style="margin-top: 8px; font-style: italic; color: #888;"><span style="color: #888;">📝</span> {activity["notes"]}</div>'
+                        
+                        # Create the activity card with proper HTML
+                        st.markdown(f"""
+                        <div style='background-color: #1E1E2E; border-radius: 10px; padding: 15px; 
+                                   margin-bottom: 20px; border-left: 4px solid {activity_color};'>
+                            <div style='display: flex; justify-content: space-between; margin-bottom: 8px;'>
+                                <div>
+                                    <span style='font-size: 16px; font-weight: bold;'>{icon} {activity['name']}</span>
+                                    <span style='color: #888; font-size: 14px;'> ({activity['duration']} min)</span>
                                 </div>
-
-                                <div style='color: #888; font-size: 14px; margin-bottom: 5px;'>
-                                    {activity['type']} {f"- {activity['transport_type']}" if activity.get('transport_type') else ""}
-                                </div>
-
-                                {f'<div style="margin-top: 8px;"><span style="color: #888;">📍</span> {activity["location"]}</div>' if activity['location'] else ''}
-                                {f'<div style="margin-top: 8px; font-style: italic; color: #888;"><span style="color: #888;">📝</span> {activity["notes"]}</div>' if activity['notes'] else ''}
                             </div>
-                            """, unsafe_allow_html=True)
+
+                            <div style='color: #888; font-size: 14px; margin-bottom: 5px;'>
+                                {activity['type']} {f"- {activity['transport_type']}" if activity.get('transport_type') else ""}
+                            </div>
+
+                            {location_html}
+                            {notes_html}
+                        </div>
+                        """, unsafe_allow_html=True)
                             
-                            # Regular Streamlit buttons for edit and delete
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                if st.button("Edit", key=f"edit_{activity['id']}"):
-                                    st.session_state.editing_activity = activity["id"]
-                                    st.rerun()
-                            with col2:
-                                if st.button("Delete", key=f"delete_{activity['id']}"):
-                                    itinerary["activities"].remove(activity)
-                                    save_callback()
-                                    st.success("Activity deleted!")
-                                    st.rerun()
-            
-            # Edit activity form
-            if st.session_state.editing_activity:
-                edit_activity = next((a for a in activities if a["id"] == st.session_state.editing_activity), None)
-                if edit_activity:
-                    st.markdown("---")
-                    st.subheader("Edit Activity")
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        edit_day = st.selectbox("Day", list(range(1, days + 1)), index=edit_activity["day"]-1, key="edit_day")
-                        edit_type = st.selectbox("Activity Type", [
-                            "Food", "Accommodation", "Sightseeing", "Meeting", 
-                            "Activity", "Rest", "Transportation", "Other"
-                        ], index=["Food", "Accommodation", "Sightseeing", "Meeting", 
-                            "Activity", "Rest", "Transportation", "Other"].index(edit_activity["type"]), key="edit_type")
-                    
-                    with col2:
-                        edit_time = st.time_input("Time", datetime.strptime(edit_activity["time"], "%H:%M").time(), key="edit_time")
-                        edit_duration = st.number_input("Duration (minutes)", min_value=15, value=edit_activity["duration"], step=15, key="edit_duration")
-                    
-                    # If Transportation is selected, show additional options
-                    edit_transport_type = None
-                    if edit_type == "Transportation":
-                        transport_options = ["Flight", "Bus", "Train", "Cab/Taxi", "Ship/Ferry", "Car Rental", "Other"]
-                        default_idx = 0
-                        if edit_activity.get("transport_type") and edit_activity["transport_type"] in transport_options:
-                            default_idx = transport_options.index(edit_activity["transport_type"])
-                        edit_transport_type = st.selectbox("Transport Type", transport_options, index=default_idx, key="edit_transport_type")
-                    
-                    edit_name = st.text_input("Activity Name", edit_activity["name"], key="edit_name")
-                    edit_location = st.text_input("Location/Address", edit_activity["location"], key="edit_location")
-                    edit_notes = st.text_area("Notes", edit_activity["notes"], key="edit_notes")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("Save Changes"):
-                            # Update activity
-                            edit_activity["name"] = edit_name
-                            edit_activity["type"] = edit_type
-                            edit_activity["transport_type"] = edit_transport_type if edit_transport_type else None
-                            edit_activity["time"] = edit_time.strftime("%H:%M")
-                            edit_activity["duration"] = edit_duration
-                            edit_activity["location"] = edit_location
-                            edit_activity["notes"] = edit_notes
-                            edit_activity["day"] = edit_day
-                            
-                            # Calculate new date based on day
-                            activity_date = start_date + timedelta(days=edit_day - 1)
-                            edit_activity["date"] = activity_date.strftime("%Y-%m-%d")
-                            
-                            save_callback()
-                            st.session_state.editing_activity = None
-                            st.success("Activity updated successfully!")
-                            st.rerun()
-                    
-                    with col2:
-                        if st.button("Cancel Editing"):
-                            st.session_state.editing_activity = None
-                            st.rerun()
+                        # Regular Streamlit buttons for edit and delete
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("Edit", key=f"edit_{activity['id']}"):
+                                st.session_state.editing_activity = activity["id"]
+                                st.rerun()
+                        with col2:
+                            if st.button("Delete", key=f"delete_{activity['id']}"):
+                                itinerary["activities"].remove(activity)
+                                save_callback()
+                                st.success("Activity deleted!")
+                                st.rerun()
 
 def get_activity_icon(activity):
     """Get icon based on activity type with transport-specific icons"""

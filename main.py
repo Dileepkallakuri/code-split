@@ -25,9 +25,9 @@ AVAILABLE_APPS = [
     "🗄️ Database & Cloud",
     "📝 YouTube Transcript Downloader",
     "🗓️ Daily Expense Tracker",
-    "🥇 Gold Price Live",
+    "🧳 Travel Itinerary Planner",
     "💡 SparkStorm & IdeaFlow",
-    "🧳 Travel Itinerary Planner"
+    "🥇 Gold Price Live"
 ]
 
 # ---- Login Screen ----

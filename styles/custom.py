@@ -36,35 +36,24 @@ def apply_styles():
             justify-content: center;
         }
         
-        /* Force dropdown to show all options without scrolling */
-        div[data-baseweb="select"] {
-            min-height: 38px !important;
+        /* Fix dropdown height to show all options */
+        div[data-baseweb="select"] ul {
+            max-height: 400px !important;
         }
         
-        /* Make dropdown list taller */
-        div[data-baseweb="select"] ul,
-        div[data-baseweb="menu"],
-        div[role="listbox"] {
-            max-height: 600px !important;
-            overflow-y: visible !important;
-        }
-        
-        /* Ensure dropdown opens upward if needed to show all options */
-        div[data-baseweb="popover"] {
-            z-index: 999 !important;
-            position: relative !important;
-        }
-        
-        /* Keep dropdown open and visible */
-        div[data-baseweb="select"] div[data-testid="stSelectbox"] {
-            height: auto !important;
+        /* Ensure the dropdown options are all visible */
+        .stSelectbox div[data-baseweb="popover"] {
             max-height: none !important;
         }
         
-        /* Alternative approach: make the select box itself taller */
-        .stSelectbox > div:first-child {
-            height: auto !important;
-            padding-bottom: 0 !important;
+        .stSelectbox div[data-baseweb="select"] div[data-baseweb="menu"] {
+            max-height: 400px !important;
+        }
+        
+        /* Make the dropdown list wider and ensure it's visible in the view */
+        div[role="listbox"] {
+            max-height: 400px !important;
+            z-index: 999 !important;
         }
     </style>
     """, unsafe_allow_html=True)

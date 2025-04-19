@@ -9,9 +9,10 @@ def load_app_module(app_mode):
         "🗄️ Database & Cloud": ("apps.database_cloud", "show_database_cloud"),
         "📝 YouTube Transcript Downloader": ("apps.youtube_downloader", "show_youtube_downloader"),
         "🗓️ Daily Expense Tracker": ("apps.expense_tracker", "show_expense_tracker"),
-        "🥇 Gold Price Live": ("apps.gold_price", "show_gold_price"),
+        "🧳 Travel Itinerary Planner": ("apps.travel_planner", "show_travel_planner"),
         "💡 SparkStorm & IdeaFlow": ("apps.sparkstorm", "show_sparkstorm"),
-        "🧳 Travel Itinerary Planner": ("apps.travel_planner", "show_travel_planner") 
+        "🥇 Gold Price Live": ("apps.gold_price", "show_gold_price"),
+         
     }
     
     if app_mode not in app_mapping:

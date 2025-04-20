@@ -8,6 +8,7 @@ from pytube import YouTube
 import random
 import os
 import requests
+import webbrowser
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 
@@ -19,8 +20,8 @@ if not os.path.exists('cache'):
 # Format: "http://ip:port"
 PROXIES = [
     # Add your proxies here, example:
-     "http://202.131.153.146:1111",
-     "http://27.124.20.41:3128",
+    # "http://202.131.153.146:1111",
+    # "http://27.124.20.41:3128",
 ]
 
 def get_random_proxy():
@@ -189,20 +190,29 @@ def show_youtube_downloader():
         margin-top: 20px;
         margin-bottom: 20px;
     }
+    .error-message {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
     </style>
     """, unsafe_allow_html=True)
     
-    with st.expander("ℹ️ About this tool"):
-        st.markdown("""
-        This tool allows you to download transcripts/subtitles from YouTube videos in different formats:
-        
-        - **TXT**: Plain text version of the transcript
-        - **JSON**: Complete data including timestamps
-        - **SRT**: Subtitle format compatible with video players
-        
-        If you encounter issues with one video, try another as not all videos have transcripts available.
-        """)
+    # New session state variable to track if redirect is needed
+    if 'redirect_clicked' not in st.session_state:
+        st.session_state.redirect_clicked = False
     
+    # Function to set redirect flag
+    def set_redirect():
+        st.session_state.redirect_clicked = True
+    
+    # Define the redirect URL
+    redirect_url = "https://093e6c49-4e56-41d3-aeab-98d3379ab34d-00-rykhxqi1xadr.worf.replit.dev/"
+        
     url = st.text_input("YouTube Video URL", placeholder="https://www.youtube.com/watch?v=...")
     
     advanced_options = st.expander("Advanced Options")
@@ -210,6 +220,16 @@ def show_youtube_downloader():
         use_proxies = st.checkbox("Use Proxy Rotation (if available)", value=PROXIES != [])
         use_fallback = st.checkbox("Use Pytube fallback if transcript API fails", value=True)
         clear_cache = st.checkbox("Clear cache for this video", value=False)
+    
+    # Check if redirect was clicked in previous run
+    if st.session_state.redirect_clicked:
+        # This creates a more reliable redirect approach
+        st.markdown(f"""
+        <meta http-equiv="refresh" content="0;URL='{redirect_url}'" />
+        <p>Redirecting to alternative service...</p>
+        <a href="{redirect_url}" target="_blank">Click here if not redirected automatically</a>
+        """, unsafe_allow_html=True)
+        st.stop()
     
     if st.button("Get Transcript"):
         if not url:
@@ -247,59 +267,79 @@ def show_youtube_downloader():
         
         st.markdown("---")
         
-        # Get transcript with loading indicator
-        with st.spinner("Fetching transcript... This may take a moment"):
-            # Try the API method first
-            transcript = get_transcript_with_api(video_id)
-            
-            # If API method fails and fallback is enabled, try pytube
-            if not transcript and use_fallback:
-                st.info("Trying alternative method to fetch subtitles...")
-                transcript = get_transcript_with_pytube(video_id)
+        # Always show custom error message and redirect button regardless of what happens
+        st.markdown("""
+        <div class="error-message">
+        Dileep's data center IPs are blocked due to excessive requests. In the event of critical priority, I can attempt connection via his personal private networks or Home VPNs, which requires authorized access. Direct communication with Dileep is needed to grant network traversal permissions.
+        </div>
+        """, unsafe_allow_html=True)
         
-        if not transcript:
-            st.error("""
-            ❌ Transcript not available. This could be due to:
-            
-            1. The video doesn't have any captions/subtitles
-            2. The captions are disabled for this video
-            3. YouTube API restrictions (try using the advanced options)
-            
-            Try another video or check if captions are available on YouTube.
-            """)
-        else:
-            # Show success and transcript preview
-            st.success(f"✅ Successfully retrieved transcript with {len(transcript)} segments")
-            
-            st.markdown("### Transcript Preview")
-            df = pd.DataFrame(transcript)
-            st.dataframe(df.head(10))
-            
-            st.markdown("### Download Options")
-            
-            # Convert to different formats
-            txt = "\n".join([item.get('text', '') for item in transcript])
-            json_data = json.dumps(transcript, indent=2)
-            
-            # Create SRT format
-            srt_data = ""
-            for i, item in enumerate(transcript):
-                start_seconds = item.get('start', 0)
-                duration = item.get('duration', 0)
+        # Add a proceed button with more descriptive text, using on_click to set state
+        st.button("Proceed to Alternative Service", on_click=set_redirect)
+        
+        # Direct link as backup in case button doesn't work
+        st.markdown(f"<a href='{redirect_url}' target='_blank'>Alternative: Open service in new tab</a>", unsafe_allow_html=True)
+        
+        # Now try to get the transcript - this code will still run but the error message
+        # and redirect button will always appear above
+        try:
+            # Get transcript with loading indicator
+            with st.spinner("Fetching transcript... This may take a moment"):
+                # Try the API method first
+                transcript = get_transcript_with_api(video_id)
                 
-                start = time.strftime('%H:%M:%S,', time.gmtime(start_seconds)) + f"{int((start_seconds % 1)*1000):03d}"
-                end = time.strftime('%H:%M:%S,', time.gmtime(start_seconds + duration)) + f"{int(((start_seconds + duration) % 1)*1000):03d}"
-                
-                srt_data += f"{i+1}\n{start} --> {end}\n{item.get('text', '')}\n\n"
+                # If API method fails and fallback is enabled, try pytube
+                if not transcript and use_fallback:
+                    st.info("Trying alternative method to fetch subtitles...")
+                    transcript = get_transcript_with_pytube(video_id)
             
-            # Download buttons
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.download_button("📥 Download TXT", txt, file_name=f"{info['title']}.txt")
-            with col2:
-                st.download_button("📥 Download JSON", json_data, file_name=f"{info['title']}.json")
-            with col3:
-                st.download_button("📥 Download SRT", srt_data, file_name=f"{info['title']}.srt")
+            if not transcript:
+                st.error("""
+                ❌ Transcript not available. This could be due to:
+                
+                1. The video doesn't have any captions/subtitles
+                2. The captions are disabled for this video
+                3. YouTube API restrictions (try using the advanced options)
+                
+                Try another video or check if captions are available on YouTube.
+                """)
+            else:
+                # Show success and transcript preview
+                st.success(f"✅ Successfully retrieved transcript with {len(transcript)} segments")
+                
+                st.markdown("### Transcript Preview")
+                df = pd.DataFrame(transcript)
+                st.dataframe(df.head(10))
+                
+                st.markdown("### Download Options")
+                
+                # Convert to different formats
+                txt = "\n".join([item.get('text', '') for item in transcript])
+                json_data = json.dumps(transcript, indent=2)
+                
+                # Create SRT format
+                srt_data = ""
+                for i, item in enumerate(transcript):
+                    start_seconds = item.get('start', 0)
+                    duration = item.get('duration', 0)
+                    
+                    start = time.strftime('%H:%M:%S,', time.gmtime(start_seconds)) + f"{int((start_seconds % 1)*1000):03d}"
+                    end = time.strftime('%H:%M:%S,', time.gmtime(start_seconds + duration)) + f"{int(((start_seconds + duration) % 1)*1000):03d}"
+                    
+                    srt_data += f"{i+1}\n{start} --> {end}\n{item.get('text', '')}\n\n"
+                
+                # Download buttons
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.download_button("📥 Download TXT", txt, file_name=f"{info['title']}.txt")
+                with col2:
+                    st.download_button("📥 Download JSON", json_data, file_name=f"{info['title']}.json")
+                with col3:
+                    st.download_button("📥 Download SRT", srt_data, file_name=f"{info['title']}.srt")
+                    
+        except Exception as e:
+            # Still display the error for debugging, but the custom message will already be shown above
+            st.error(f"Error processing transcript: {str(e)}")
 
 if __name__ == "__main__":
     show_youtube_downloader()

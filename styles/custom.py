@@ -35,5 +35,25 @@ def apply_styles():
             flex-direction: column;
             justify-content: center;
         }
+        
+        /* Fix dropdown height to show all options */
+        div[data-baseweb="select"] ul {
+            max-height: 400px !important;
+        }
+        
+        /* Ensure the dropdown options are all visible */
+        .stSelectbox div[data-baseweb="popover"] {
+            max-height: none !important;
+        }
+        
+        .stSelectbox div[data-baseweb="select"] div[data-baseweb="menu"] {
+            max-height: 400px !important;
+        }
+        
+        /* Make the dropdown list wider and ensure it's visible in the view */
+        div[role="listbox"] {
+            max-height: 400px !important;
+            z-index: 999 !important;
+        }
     </style>
     """, unsafe_allow_html=True)

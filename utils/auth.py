@@ -6,7 +6,8 @@ USERS = {
     "Dileep": "1234",
     "Prasanna": "97045",
     "Kalyan": "123",
-    "Naresh": "123"
+    "Naresh": "123",
+    "Rohit": "5353"
 }
 
 def check_credentials(username, password):
@@ -31,14 +32,20 @@ def login_screen():
                 st.error("❌ Invalid credentials")
         st.markdown("</div>", unsafe_allow_html=True)
 
-def show_sidebar(app_mode, available_apps):
-    """Display sidebar with app switcher and logout button"""
+def show_sidebar_header():
+    """Display just the header portion of the sidebar"""
     st.sidebar.title("Dileep Apps Space")
     st.sidebar.markdown(f"👤 Logged in as **{st.session_state.auth_username}**")
     st.sidebar.markdown("---")
+    
+    # App-specific functions will be added here by the individual app
+
+def show_sidebar_footer(app_mode, available_apps):
+    """Display the footer portion of the sidebar with app switching options"""
+    st.sidebar.markdown("---")
     st.sidebar.subheader("Switch App")
     new_app = st.sidebar.radio("Select App", available_apps, 
-                             index=available_apps.index(app_mode))
+                            index=available_apps.index(app_mode))
 
     if new_app != app_mode:
         st.session_state.selected_app = new_app
@@ -52,3 +59,8 @@ def show_sidebar(app_mode, available_apps):
         st.session_state.selected_app = None
         st.session_state.selected_db_tool = None
         st.rerun()
+
+def show_sidebar(app_mode, available_apps):
+    """For backwards compatibility - this will call both header and footer"""
+    show_sidebar_header()
+    show_sidebar_footer(app_mode, available_apps)

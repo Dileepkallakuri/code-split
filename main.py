@@ -1,10 +1,10 @@
 import streamlit as st
-from utils.auth import check_credentials, login_screen, show_sidebar
+from utils.auth import check_credentials, login_screen, show_sidebar_header, show_sidebar_footer
 from utils.helpers import load_app_module
 from styles.custom import apply_styles
 
 # Set page config
-st.set_page_config(page_title="Dileep Apps Space", page_icon="🛠️", layout="wide")
+st.set_page_config(page_title="Dileep Apps Space", page_icon="🤩", layout="wide")
 
 # Apply custom CSS
 apply_styles()
@@ -23,10 +23,11 @@ AVAILABLE_APPS = [
     "📈 Crypto Trade Tracker",
     "📊 Stocks Journal",
     "🗄️ Database & Cloud",
-    "📝 YouTube Transcript Downloader",
     "🗓️ Daily Expense Tracker",
-    "🥇 Gold Price Live",
-    "💡 SparkStorm & IdeaFlow"
+    "🛫 Travel Itinerary Planner",
+    "💡 SparkStorm & IdeaFlow",
+    "📝 YouTube Transcript Downloader",
+    "🥇 Gold Price Live"
 ]
 
 # ---- Login Screen ----
@@ -46,9 +47,13 @@ if not st.session_state.selected_app:
         st.rerun()
     st.stop()
 
-# ---- Sidebar with App Switcher and Logout ----
+# ---- Sidebar Header ----
 app_mode = st.session_state.selected_app
-show_sidebar(app_mode, AVAILABLE_APPS)
+show_sidebar_header()
 
 # ---- Load the appropriate app module ----
+# App functions will be displayed here in the sidebar
 load_app_module(app_mode)
+
+# ---- Sidebar Footer with App Switcher and Logout ----
+show_sidebar_footer(app_mode, AVAILABLE_APPS)
